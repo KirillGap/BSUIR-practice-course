@@ -9,10 +9,17 @@ from ImageProcessor import ImageProcessor
 
 class Application:
     def __init__(self, master=None):
+        """
+                Инициализация приложения.
+
+                Args:
+                    master: Главное окно приложения.
+        """
+
         self.list_of_images = list()
         self.toplevel = None
         self.toplevel_sheet = None
-        self.canvas = None
+        self.image_label = None
         self.master = master
 
         self.master.title('image classifier')
@@ -50,15 +57,25 @@ class Application:
         self.sheet.grid(row=0, column=0)
 
     def open_dir(self):
-        filename = filedialog.askdirectory()
+        """
+            Открывает диалоговое окно для выбора рабочей директории.
+        """
+        filename = filedialog.askdirectory() # диалоговое окно для выбора рабочей директории
         if filename:
             self.read_dir(filename)
         else:
             raise ValueError("Choose direcory with images")
 
     def read_dir(self, dir_name):
+        """
+                Считывает изображения из указанной директории.
+
+                Args:
+                    dir_name: Путь к директории с изображениями.
+                """
+
         if self.list_of_images:
-            self.list_of_images.clear()
+            self.list_of_images.clear()  # очистка предыдущей таблицы
 
         for filename in os.listdir(dir_name):
             if filename[-4:] == '.jpg':
@@ -69,72 +86,113 @@ class Application:
                     'aHash': ImageProcessor.ahash(path),
                 })
             else:
-                raise TypeError(f'{filename}  -  unexpected type')
+                raise TypeError(f'{filename}  -  unexpected type')  # вызов ошибки о необрабатываемом типе файла
 
         self.update_data()
 
     def update_data(self):
+        """
+                Обновляет данные в таблице.
+        """
         self.sheet.clear()
-        data = self.get_data()
+        data = self.get_data()  # сбор данных в один массив
         self.sheet.set_data(data=data)
 
     def get_data(self):
+        """
+                Возвращает данные для отображения в таблице.
+
+                Returns:
+                    list: Список данных для таблицы.
+                """
         out = []
         for row in self.list_of_images:
             new_row = [row[key] for key in row.keys()]
             out.append(new_row)
         return out
 
-    def on_cell_click(self, event):
-        row = event['selected'].row
-        path = self.sheet.get_cell_data(row, 1)
+    def create_image_label(self, parent, height, width, image):
+        """
+        Создает и возвращает объект Canvas.
 
-        toplevel = tk.Toplevel(self.master)
+        Args:
+            parent: Родительский виджет (например, окно или фрейм).
+            height: Высота Canvas.
+            width: Ширина Canvas.
+
+        Returns:
+            tk.Canvas: Объект Canvas.
+        """
+        image_label = tk.Canvas(parent, height=height, width=width)  # инициализация пространства для изображения
+        image_label.create_image(0, 0, anchor='nw', image=image)  # загрузка изображения
+        return image_label
+
+    def on_cell_click(self, event):
+        """
+                Обработчик события клика по ячейке таблицы.
+
+                Args:
+                    event: Событие клика.
+                """
+        row = event['selected'].row
+        path = self.sheet.get_cell_data(row, 1)  # получение пути к выбранному изображению
+
+        toplevel = tk.Toplevel(self.master)  # Создание нового окна
         self.toplevel = toplevel
 
-        canvas1 = tk.Canvas(toplevel, height=500, width=500)  # Уменьшил ширину Canvas
-
-        img = ImageProcessor.prepare_image(path)
-
-        canvas1.create_image(0, 0, anchor='nw', image=img)
-        canvas1.grid(row=0, column=0, padx=1)
+        img = ImageProcessor.prepare_image(path)  # получение изображения по пути
+        original_image = self.create_image_label(self.toplevel, 500, 500, img)  # создание лэйбла и загрузка изображения
+        original_image.grid(row=0, column=0, padx=1)
 
         toplevel_sheet = Sheet(
             parent=toplevel,
             width=400,
             show_row_index=False,
             show_x_scrollbar=False
-        )
+        )   # инициализация таблицы
         self.toplevel_sheet = toplevel_sheet
         toplevel_sheet.set_column_widths([200, 100])
         toplevel_sheet.enable_bindings('single_select')
         toplevel_sheet.extra_bindings('cell_select', self.on_cell_select)
         toplevel_sheet.headers(['name', 'similarity, %'])
-        toplevel_sheet.grid(row=0, column=1, padx=1)
+        toplevel_sheet.grid(row=0, column=1, padx=1)  # Создание таблицы
 
         data = ImageProcessor.prepare_table_data(
             list=self.list_of_images,
             index=row
         )
-        toplevel_sheet.set_data(data=data)
+        toplevel_sheet.set_data(data=data)  # Заполнение таблицы
 
-        canvas2 = tk.Canvas(toplevel, height=500, width=500)
-        self.canvas = canvas2
-        # canvas2.create_image(0, 0, anchor='nw')
-        canvas2.grid(row=0, column=2)
+        # Создание пустого лейбла для просмотра изображений из таблицы
+        target_image = self.create_image_label(self.toplevel, 500, 500, image=None)
+
+        self.image_label = target_image
+        target_image.grid(row=0, column=2)
 
         toplevel.mainloop()
 
     def on_cell_select(self, event):
+        """
+                Обработчик события выбора ячейки во второй таблице.
+
+                Args:
+                    event: Событие выбора ячейки.
+                """
+        # получение имени интересующего изображения
         row = event['selected'].row
         filename = self.toplevel_sheet.get_cell_data(row, 0)
 
+        # получение индекса изображения в основной таблице
         index = [item['name'] for item in self.list_of_images].index(filename)
         path = self.list_of_images[index]['path']
 
+        # Загрузка и отображение выбранного изображения
         new_img = ImageProcessor.prepare_image(path)
-        self.canvas.create_image(0, 0, anchor='nw', image=new_img)
-        self.img = new_img
+        self.image_label.create_image(0, 0, anchor='nw', image=new_img)
+        self.image = new_img
 
     def show_about(self):
+        """
+                Выводит информацию о программе.
+        """
         print("О программе...")
