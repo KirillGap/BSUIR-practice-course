@@ -5,6 +5,15 @@ from PIL import Image, ImageTk
 class ImageProcessor:
     @staticmethod
     def ahash(image_path):
+        """
+                Вычисляет ахеш изображения.
+
+                Args:
+                    image_path (str): Путь к изображению.
+
+                Returns:
+                    str: Ахеш изображения (бинарная строка).
+                """
         # Загрузка изображения
         image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
 
@@ -24,6 +33,16 @@ class ImageProcessor:
 
     @staticmethod
     def compare_images(hash1, hash2):
+        """
+               Сравнивает два ахеша изображений и возвращает процент схожести.
+
+               Args:
+                   hash1 (str): Первый ахеш.
+                   hash2 (str): Второй ахеш.
+
+               Returns:
+                   float: Процент схожести (от 0 до 100).
+               """
         similarity = 0
         for bit1, bit2 in zip(hash1, hash2):
             if bit1 == bit2:
@@ -33,6 +52,16 @@ class ImageProcessor:
 
     @staticmethod
     def prepare_table_data(list, index):
+        """
+                Подготавливает данные для отображения в таблице сравнения.
+
+                Args:
+                    image_list (list): Список изображений.
+                    index (int): Индекс текущего изображения.
+
+                Returns:
+                    list: Отсортированный список данных для таблицы.
+                """
         out = []
         ahash = list[index]['aHash']
         for i, item in enumerate(list):
@@ -44,6 +73,16 @@ class ImageProcessor:
 
     @staticmethod
     def prepare_image(path):
+        """
+                Подготавливает изображение для отображения в Canvas.
+
+                Args:
+                    path (str): Путь к изображению.
+
+                Returns:
+                    ImageTk.PhotoImage: Объект изображения для отображения.
+                """
+
         image = Image.open(path)
         image = image.resize(size=(500, 500))
         image = ImageTk.PhotoImage(image)
