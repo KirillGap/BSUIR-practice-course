@@ -60,7 +60,7 @@ class Application:
         """
             Открывает диалоговое окно для выбора рабочей директории.
         """
-        filename = filedialog.askdirectory()
+        filename = filedialog.askdirectory() # диалоговое окно для выбора рабочей директории
         if filename:
             self.read_dir(filename)
         else:
@@ -75,7 +75,7 @@ class Application:
                 """
 
         if self.list_of_images:
-            self.list_of_images.clear()
+            self.list_of_images.clear()  # очистка предыдущей таблицы
 
         for filename in os.listdir(dir_name):
             if filename[-4:] == '.jpg':
@@ -86,7 +86,7 @@ class Application:
                     'aHash': ImageProcessor.ahash(path),
                 })
             else:
-                raise TypeError(f'{filename}  -  unexpected type')
+                raise TypeError(f'{filename}  -  unexpected type')  # вызов ошибки о необрабатываемом типе файла
 
         self.update_data()
 
@@ -95,7 +95,7 @@ class Application:
                 Обновляет данные в таблице.
         """
         self.sheet.clear()
-        data = self.get_data()
+        data = self.get_data()  # сбор данных в один массив
         self.sheet.set_data(data=data)
 
     def get_data(self):
@@ -123,8 +123,8 @@ class Application:
         Returns:
             tk.Canvas: Объект Canvas.
         """
-        image_label = tk.Canvas(parent, height=height, width=width)
-        image_label.create_image(0, 0, anchor='nw', image=image)
+        image_label = tk.Canvas(parent, height=height, width=width)  # инициализация пространства для изображения
+        image_label.create_image(0, 0, anchor='nw', image=image)  # загрузка изображения
         return image_label
 
     def on_cell_click(self, event):
@@ -135,13 +135,13 @@ class Application:
                     event: Событие клика.
                 """
         row = event['selected'].row
-        path = self.sheet.get_cell_data(row, 1)
+        path = self.sheet.get_cell_data(row, 1)  # получение пути к выбранному изображению
 
-        toplevel = tk.Toplevel(self.master)
+        toplevel = tk.Toplevel(self.master)  # Создание нового окна
         self.toplevel = toplevel
 
-        img = ImageProcessor.prepare_image(path)
-        original_image = self.create_image_label(self.toplevel, 500, 500, img)
+        img = ImageProcessor.prepare_image(path)  # получение изображения по пути
+        original_image = self.create_image_label(self.toplevel, 500, 500, img)  # создание лэйбла и загрузка изображения
         original_image.grid(row=0, column=0, padx=1)
 
         toplevel_sheet = Sheet(
@@ -149,21 +149,23 @@ class Application:
             width=400,
             show_row_index=False,
             show_x_scrollbar=False
-        )
+        )   # инициализация таблицы
         self.toplevel_sheet = toplevel_sheet
         toplevel_sheet.set_column_widths([200, 100])
         toplevel_sheet.enable_bindings('single_select')
         toplevel_sheet.extra_bindings('cell_select', self.on_cell_select)
         toplevel_sheet.headers(['name', 'similarity, %'])
-        toplevel_sheet.grid(row=0, column=1, padx=1)
+        toplevel_sheet.grid(row=0, column=1, padx=1)  # Создание таблицы
 
         data = ImageProcessor.prepare_table_data(
             list=self.list_of_images,
             index=row
         )
-        toplevel_sheet.set_data(data=data)
+        toplevel_sheet.set_data(data=data)  # Заполнение таблицы
 
+        # Создание пустого лейбла для просмотра изображений из таблицы
         target_image = self.create_image_label(self.toplevel, 500, 500, image=None)
+
         self.image_label = target_image
         target_image.grid(row=0, column=2)
 
@@ -176,12 +178,15 @@ class Application:
                 Args:
                     event: Событие выбора ячейки.
                 """
+        # получение имени интересующего изображения
         row = event['selected'].row
         filename = self.toplevel_sheet.get_cell_data(row, 0)
 
+        # получение индекса изображения в основной таблице
         index = [item['name'] for item in self.list_of_images].index(filename)
         path = self.list_of_images[index]['path']
 
+        # Загрузка и отображение выбранного изображения
         new_img = ImageProcessor.prepare_image(path)
         self.image_label.create_image(0, 0, anchor='nw', image=new_img)
         self.image = new_img
