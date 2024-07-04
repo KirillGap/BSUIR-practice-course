@@ -1,5 +1,7 @@
 import os
 import tkinter as tk
+import threading
+import asyncio
 from tkinter import Menu
 from tkinter import filedialog
 from tkinter import messagebox
@@ -56,42 +58,59 @@ class Application:
         """
             Открывает диалоговое окно для выбора рабочей директории.
         """
-        filename = filedialog.askdirectory() # диалоговое окно для выбора рабочей директории
-        if filename:
-            self.read_dir(filename)
-        else:
-            raise ValueError("Выберите директорию")
+        try:
+            filename = filedialog.askdirectory() # диалоговое окно для выбора рабочей директории
+            if filename:
+                thread1 = threading.Thread(target=self.read_dir,
+                                           args=(filename,))
+                thread2 = threading.Thread(target=messagebox.showinfo,
+                                           args=("Загрузка", "Ваши изображения загружаются"))
+                thread1.start()
+                thread2.start()
+            else:
+                raise ValueError("Выберите директорию")
+        except Exception as e:
+            messagebox.showerror('Ошибка', f'{e}')
 
     def read_dir(self, dir_name):
         """
-                Считывает изображения из указанной директории.
+        Считывает изображения из указанной директории.
 
-                Args:
-                    dir_name: Путь к директории с изображениями.
-                """
-        unexpected_type_filenames = []
+        Args:
+            dir_name: Путь к директории с изображениями.
+        """
 
-        if self.list_of_images:
-            self.list_of_images.clear()  # очистка предыдущей таблицы
+        def reading(dir_name, start_index):
+            for filename in os.listdir(dir_name)[start_index::5]:
+                if filename[-4:] == '.jpg':
+                    path = dir_name + f'/{filename}'
+                    self.list_of_images.append({
+                        'name': filename,
+                        'path': path,
+                        'aHash': ImageProcessor.ahash(path),
+                    })
+                else:
+                    self.unexpected_type_filenames.append(filename)
 
-        for filename in os.listdir(dir_name):
-            if filename[-4:] == '.jpg':
-                path = dir_name + f'/{filename}'
-                self.list_of_images.append({
-                    'name': filename,
-                    'path': path,
-                    'aHash': ImageProcessor.ahash(path),
-                })
-            else:
-                unexpected_type_filenames.append(filename)
-
+        self.unexpected_type_filenames = []
         try:
-            if unexpected_type_filenames:
-                raise TypeError(f'Неподдерживаемый тип файла в директории:\n {unexpected_type_filenames}')
+            if self.list_of_images:
+                self.list_of_images.clear()  # очистка предыдущей таблицы
+
+            threads = [threading.Thread(target=reading, args=(dir_name, interval)) for interval in range(5)]
+            for thread in threads:
+                thread.start()
+
+            for thread in threads:
+                thread.join()
+
+            if self.unexpected_type_filenames:
+                raise TypeError(f'Неподдерживаемый тип файла в директории:\n {self.unexpected_type_filenames}')
         except Exception as e:
             error_message = "Неподдерживаемый тип файла в директории:\n"
-            error_message += "\n".join(unexpected_type_filenames)
+            error_message += "\n".join(self.unexpected_type_filenames)
             messagebox.showerror('Ошибка', error_message)
+
         self.update_data()
 
 
