@@ -2,6 +2,7 @@ import os
 import tkinter as tk
 from tkinter import Menu
 from tkinter import filedialog
+from tkinter import messagebox
 from tksheet import Sheet
 
 from ImageProcessor import ImageProcessor
@@ -37,11 +38,6 @@ class Application:
         file_menu.add_separator()
         menubar.add_cascade(label='Файл', menu=file_menu)
 
-        # Подменю "Справка"
-        help_menu = Menu(menubar, tearoff=False)
-        help_menu.add_command(label='О программе', command=self.show_about)
-        menubar.add_cascade(label='Справка', menu=help_menu)
-
         # Таблица
         sheet = Sheet(
             parent=self.master,
@@ -64,7 +60,7 @@ class Application:
         if filename:
             self.read_dir(filename)
         else:
-            raise ValueError("Choose direcory with images")
+            raise ValueError("Выберите директорию")
 
     def read_dir(self, dir_name):
         """
@@ -73,6 +69,7 @@ class Application:
                 Args:
                     dir_name: Путь к директории с изображениями.
                 """
+        unexpected_type_filenames = []
 
         if self.list_of_images:
             self.list_of_images.clear()  # очистка предыдущей таблицы
@@ -86,9 +83,17 @@ class Application:
                     'aHash': ImageProcessor.ahash(path),
                 })
             else:
-                raise TypeError(f'{filename}  -  unexpected type')  # вызов ошибки о необрабатываемом типе файла
+                unexpected_type_filenames.append(filename)
 
+        try:
+            if unexpected_type_filenames:
+                raise TypeError(f'Неподдерживаемый тип файла в директории:\n {unexpected_type_filenames}')
+        except Exception as e:
+            error_message = "Неподдерживаемый тип файла в директории:\n"
+            error_message += "\n".join(unexpected_type_filenames)
+            messagebox.showerror('Ошибка', error_message)
         self.update_data()
+
 
     def update_data(self):
         """
@@ -190,9 +195,3 @@ class Application:
         new_img = ImageProcessor.prepare_image(path)
         self.image_label.create_image(0, 0, anchor='nw', image=new_img)
         self.image = new_img
-
-    def show_about(self):
-        """
-                Выводит информацию о программе.
-        """
-        print("О программе...")
